@@ -30,6 +30,9 @@
 
 bool PM = false;
 bool ALARM_ON = false;
+bool ALARM_ACTIVE = false;
+bool SNOOZE = false;
+
 char temp = 0;
 
 void setTime(void);
@@ -105,7 +108,7 @@ void changeTime(void){
 		PM = false;
 
 	commandLed(1);
-	commandLed(0xC0);
+	//commandLed(0xC0);
 	charWrite(32);
 	charWrite(32);
 	charWrite(32);
@@ -137,25 +140,69 @@ void changeTime(void){
 		charWrite(32);
 		charWrite(temp);
 	}
+	if(!ALARM_ACTIVE){
+		commandLed(0xC0);//commandLed(0xD4);
+		wordWrite("A: Set Time");
+		commandLed(0x94);
+		wordWrite("B: Set Alarm");
+		commandLed(0xD4);
+		wordWrite("C: On/Off (");
+		if(ALARM_ON)
+			wordWrite("ON)");
+		else
+			wordWrite("OFF)");
+		if(SNOOZE)
+			wordWrite("  Zzzz");
+	}
+	else{
+		commandLed(0x94);
+		wordWrite("Press D for OFF");
+		commandLed(0xD4);
+		wordWrite("Press ANY for snooze");
+	}
 }
 
 void alarm(void){
+	ALARM_ACTIVE = true;
 	PWM _alarm(PWM1_1);
 	_alarm.setFrequency(770);
 	_alarm = 0.5;
 	char off = 0;
-	do{
+
+	while(off == 0){
 		commandLed(1);
+		if((off = keyPress()) != 0)
+			break;
+
 		_alarm.setFrequency(960);
+		if((off = keyPress()) != 0)
+			break;
+
 		wait(0.7);
-		changeTime();//wordWrite("Alarm!!!");
+		if((off = keyPress()) != 0)
+			break;
+
+		changeTime();
+		if((off = keyPress()) != 0)
+			break;
+
 		_alarm.setFrequency(770);
+		if((off = keyPress()) != 0)
+			break;
+
 		wait(0.7);
 		off = keyPress();
-	}while(off == 0);
+	}
 
+	if(off != 'D'){
+		ALMIN = ALMIN + 1;
+		SNOOZE = true;
+	}
+	else
+		SNOOZE = false;
 	_alarm = 0;
 	ILR |= (1 << 1);	// Clear Alarm
+	ALARM_ACTIVE = false;
 }
 
 void clockSetup(void){
