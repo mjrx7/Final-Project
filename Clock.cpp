@@ -26,6 +26,12 @@
 // Mask year,mon,doy,dow,dom,hour,min,sec
 #define ILR (*(volatile unsigned int *) 0x40024000)
 
+bool PM = false;
+char temp = 0;
+
+void changeTime(void);
+void setAlarm(void);
+
 int main(void) {
 	AMR = 0;
 	AMR |= (0x1f << 3);	// Mask Alarm Registers year, month, doy, dow, dom
@@ -46,8 +52,7 @@ int main(void) {
 	unsigned int timeInSeconds = 0;
     unsigned int timeInMinutes = 0;
     unsigned int timeInHours = 0;
-    bool PM = false;
-    char temp = 0;
+
     PWM alarm(PWM1_1);
     alarm.setFrequency(770);
     while(1) {
@@ -64,26 +69,8 @@ int main(void) {
     		}
     		alarm = 0;
     	}
-    	while(temp == 'A'){
-    		while(keyPress()=='A'){};
-    		char temp2 = 0;
-    		char temp3 = 0;
-    		char pauser;
-    		while(temp2 == 0){
-    			temp2 = keyPress();
-    			pauser = temp2;
-    		}
-    		while(temp3 == 0){
-    			while(keyPress()==pauser){};
-    			pauser = 'x';
-    			temp3 = keyPress();
-    		}
-    		CCR = 0b10010;
-			CCR = 0b10000;
-			HOUR = (temp2 - 48)*10+(temp3-48);
-			SEC = 0;
-			CCR = 0b10001;
-			temp = 0;
+    	if(temp == 'A'){
+    		changeTime();
     	}
     	while(temp == 'B'){
 			while(keyPress()=='B'){};
@@ -111,8 +98,9 @@ int main(void) {
         timeInSeconds = (time) & 0x3F;
         timeInMinutes = (time >> 8) & 0x3F;
         timeInHours = (time >> 16) & 0x1F;
-        if(timeInHours > 12){
-        	timeInHours = timeInHours - 12;
+        if(timeInHours >= 12){
+        	if(timeInHours!=12)
+        		timeInHours = timeInHours - 12;
         	PM = true;
         }
         else
@@ -148,4 +136,83 @@ int main(void) {
 
     }
     return 0 ;
+}
+
+void changeTime(void){
+	while(temp=='A'){
+		while(keyPress()=='A'){};
+		char hrDig10temp = 0;
+		char hrDig1temp = 0;
+		char minDig10temp = 0;
+		char minDig1temp = 0;
+		char pauser;
+
+		commandLed(1);
+		wordWrite("Change current time");
+		commandLed(0xC0);
+		wordWrite("Enter hour: XX");
+		commandLed(0x94);
+		wordWrite("Press # to exit");
+		while(hrDig10temp == 0){
+			hrDig10temp = keyPress();
+			pauser = hrDig10temp;
+		}
+		if(hrDig10temp == '#')
+			break;			// Exit time change w/o changes
+
+		commandLed(1);
+		wordWrite("Change current time");
+		commandLed(0xC0);
+		wordWrite("Enter hour: ");
+		charWrite(hrDig10temp);
+		wordWrite("X");
+		commandLed(0x94);
+		wordWrite("Press # to exit");
+		while(hrDig1temp == 0){
+			while(keyPress()==pauser){};
+			//pauser = 'x';
+			hrDig1temp = keyPress();
+			pauser = hrDig1temp;
+		}
+		if(hrDig1temp == '#')
+			break;			// Exit time change w/o changes
+
+		commandLed(1);
+		wordWrite("Change current time");
+		commandLed(0xC0);
+		wordWrite("Enter minute: XX");
+		commandLed(0x94);
+		wordWrite("Press # to exit");
+		while(minDig10temp == 0){
+			while(keyPress()==pauser){};
+			minDig10temp = keyPress();
+			pauser = minDig10temp;
+		}
+		if(minDig10temp == '#')
+			break;			// Exit time change w/o changes
+
+		commandLed(1);
+		wordWrite("Change current time");
+		commandLed(0xC0);
+		wordWrite("Enter minute: ");
+		charWrite(minDig10temp);
+		wordWrite("X");
+		commandLed(0x94);
+		wordWrite("Press # to exit");
+		while(minDig1temp == 0){
+			while(keyPress()==pauser){};
+			pauser = 'x';
+			minDig1temp = keyPress();
+		}
+		if(minDig1temp == '#')
+			break;			// Exit time change w/o changes
+
+		CCR = 0b10010;
+		CCR = 0b10000;
+		HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+		MIN = (minDig10temp - 48)*10 + (minDig1temp-48);
+		SEC = 0;
+		CCR = 0b10001;
+		temp = 0;
+	}
 }
