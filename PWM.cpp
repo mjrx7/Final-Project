@@ -50,6 +50,11 @@ PWM::PWM(PIN pin)
 	setupPWM(pin);
 }
 
+PWM::~PWM()
+{
+
+}
+
 unsigned int PWM::getPulseWidth(void)
 {
 	return _pulseWidth;

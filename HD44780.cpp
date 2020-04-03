@@ -13,7 +13,7 @@
 void BusoutWrite(unsigned int);//uint8_t);
 void commandLed(unsigned int);//uint8_t);
 void charWrite(unsigned int);//uint8_t);
-void setup(void);
+void setupHD44780(void);
 void wordWrite(char*);
 
 /*
@@ -30,7 +30,7 @@ void wordWrite(char* word){
 		charWrite(word[i]);
 }
 
-void setup(void){
+void setupHD44780(void){
 	/*
 	 * Setup Pins
 	 * RS: p0.9
@@ -67,7 +67,7 @@ void commandLed(unsigned int cmd){//uint8_t cmd){
 	FIO0PIN &= ~(1 << 8);
 	wait_us(100);
 	if(cmd==1)
-		wait_ms(3);
+		wait_ms(2);
 }
 
 void BusoutWrite(unsigned int x){//uint8_t x){

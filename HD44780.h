@@ -13,7 +13,7 @@
 void BusoutWrite(unsigned int);//uint8_t);
 void commandLed(unsigned int);//uint8_t);
 void charWrite(unsigned int);//uint8_t);
-void setup(void);
+void setupHD44780(void);
 void wordWrite(char*);
 
 #endif /* HD44780_H_ */
