@@ -22,4 +22,12 @@
 #define ILR (*(volatile unsigned int *) 0x40024000)
 #define ALARM_INTERRUPT ((ILR >> 1) & 1)
 
+#define T0TCR (*(volatile unsigned int *) 0x40004004)
+#define T0MR0 (*(volatile unsigned int *) 0x40004018)
+#define T0MCR (*(volatile unsigned int *) 0x40004014)
+#define T0TCR (*(volatile unsigned int *) 0x40004004)
+#define ISER0 (*(volatile unsigned int *) 0xE000E100)
+#define T0TC (*(volatile unsigned int *) 0x40004008)
+#define T0IR (*(volatile unsigned int *) 0x40004000)
+
 #endif /* LPC1769_RTC_DEFINITIONS_H_ */
