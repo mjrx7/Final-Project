@@ -11,22 +11,8 @@
 #include "TimerLPC.h"
 #include "HD44780.h"
 #include "KeyPad.h"
+#include "LPC1769_RTC_DEFINITIONS.h"
 #include "PWM.h"
-
-#define SEC (*(volatile unsigned int *) 0x40024020)
-#define MIN (*(volatile unsigned int *) 0x40024024)
-#define HOUR (*(volatile unsigned int *) 0x40024028)
-#define CTIME0 (*(volatile unsigned int *) 0x40024014)
-#define CCR (*(volatile unsigned int *) 0x40024008)
-
-#define ALSEC (*(volatile unsigned int *) 0x40024060)
-#define ALMIN (*(volatile unsigned int *) 0x40024064)
-#define ALHOUR (*(volatile unsigned int *) 0x40024068)
-#define AMR (*(volatile unsigned int *) 0x40024010)
-// Mask year,mon,doy,dow,dom,hour,min,sec
-#define ILR (*(volatile unsigned int *) 0x40024000)
-
-#define ALARM_INTERRUPT ((ILR >> 1) & 1)
 
 bool PM = false;
 bool ALARM_ON = false;
@@ -78,7 +64,7 @@ void toggleAlarm(void){
 		charWrite(32);
 		charWrite(32);
 		wordWrite("Alarm On");
-		wait(0.7);
+		wait(1);
 	}
 	else{
 		AMR = 1;
@@ -89,7 +75,7 @@ void toggleAlarm(void){
 		charWrite(32);
 		charWrite(32);
 		wordWrite("Alarm Off");
-		wait(0.7);
+		wait(1);
 	}
 	ALARM_ON = !ALARM_ON;
 }
@@ -108,7 +94,6 @@ void changeTime(void){
 		PM = false;
 
 	commandLed(1);
-	//commandLed(0xC0);
 	charWrite(32);
 	charWrite(32);
 	charWrite(32);
@@ -141,7 +126,7 @@ void changeTime(void){
 		charWrite(temp);
 	}
 	if(!ALARM_ACTIVE){
-		commandLed(0xC0);//commandLed(0xD4);
+		commandLed(0xC0);
 		wordWrite("A: Set Time");
 		commandLed(0x94);
 		wordWrite("B: Set Alarm");
@@ -329,12 +314,9 @@ void setAlarm(void){
 		if(minDig1temp == '#')
 			break;			// Exit time change w/o changes
 
-		//CCR = 0b10010;
-		//CCR = 0b10000;
 		ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
 		ALMIN = (minDig10temp - 48)*10 + (minDig1temp-48);
-		//SEC = 0;
-		//CCR = 0b10001;
+
 		temp = 0;
 	}
 }
