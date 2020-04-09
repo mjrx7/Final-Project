@@ -24,6 +24,7 @@ bool ALARM_ACTIVE = false;
 bool SNOOZE = false;
 
 char KEYPUSHED = 0;
+int SNOOZE_TIME = 1;
 
 void setTime(void);
 void setAlarm(void);
@@ -31,6 +32,8 @@ void alarm(void);
 void clockSetup(void);
 void changeTime(void);
 void toggleAlarm(void);
+void setSnooze(void);
+void TIMER_IRQ_SETUP(void);
 
 extern "C" void TIMER0_IRQHandler(void){
 	if((T0IR >> 0) & 1){
@@ -41,14 +44,10 @@ extern "C" void TIMER0_IRQHandler(void){
 }
 
 int main(void) {
-	T0TCR |= 1;	// Start Timer
-	T0MR0 = T0TC + 500; // Interrupt 1000 us into future
-	T0MCR |= (1 << 0);	// enable interrupt on MR0 match
-	ISER0 = (1 << 1);	// Enable interrupts for Timer 0
-
 	wait(2);
 	setupHD44780();
 	setupKeyPad();
+	TIMER_IRQ_SETUP();
 	clockSetup();
 
     while(1) {
@@ -60,10 +59,53 @@ int main(void) {
 			setAlarm();
     	if(KEYPUSHED == 'C')
     		toggleAlarm();
+    	if(KEYPUSHED == 'D')
+    		setSnooze();
     	changeTime();
 		wait(.3);
     }
     return 0 ;
+}
+
+void setSnooze(void){
+	while(KEYPUSHED == 'D'){};
+	char snoozeDig1temp = 0;
+
+	commandLed(1);
+	wordWrite("Change snooze time");
+	commandLed(0xC0);
+	wordWrite("Current: ");
+	charWrite(SNOOZE_TIME + 48);
+	if(SNOOZE_TIME == 1)
+		wordWrite(" min");
+	else
+		wordWrite(" mins");
+
+	commandLed(0x94);
+	wordWrite("Input: X (1-9 max)");
+	commandLed(0xD4);
+	wordWrite("Press # to exit");
+
+	commandLed(0xD);	// Set cursor blinking
+	commandLed(0x9b);
+
+	while(snoozeDig1temp == 0){
+		snoozeDig1temp = KEYPUSHED;
+	}
+	if(snoozeDig1temp != '#'){
+		if((snoozeDig1temp <= '0') || (snoozeDig1temp > '9'))
+			SNOOZE_TIME = 1;
+		else
+			SNOOZE_TIME = snoozeDig1temp - 48;
+	}
+	commandLed(0x0c);
+}
+
+void TIMER_IRQ_SETUP(void){
+	T0TCR |= 1;	// Start Timer
+	T0MR0 = T0TC + 500; // Interrupt 1000 us into future
+	T0MCR |= (1 << 0);	// enable interrupt on MR0 match
+	ISER0 = (1 << 1);	// Enable interrupts for Timer 0
 }
 
 void toggleAlarm(void){
@@ -81,6 +123,7 @@ void toggleAlarm(void){
 		wait(1.5);
 	}
 	else{
+		SNOOZE = false;
 		AMR = 1;
 		commandLed(1);
 		commandLed(0xC0);
@@ -181,11 +224,21 @@ void alarm(void){
 	}
 
 	if(off != 'D'){
-		ALMIN = ALMIN + 1;
+		if(ALMIN + SNOOZE_TIME >= 60){
+			if(ALHOUR + 1 == 24)
+				ALHOUR = 0;
+			else
+				ALHOUR++;
+			ALMIN = ALMIN + SNOOZE_TIME - 60;
+		}
+		else
+			ALMIN = ALMIN + SNOOZE_TIME;
 		SNOOZE = true;
+		off = KEYPUSHED;
 	}
 	else
 		SNOOZE = false;
+	while(off == KEYPUSHED){}
 	_alarm = 0;
 	ILR |= (1 << 1);	// Clear Alarm
 	ALARM_ACTIVE = false;
@@ -195,15 +248,16 @@ void clockSetup(void){
 	AMR = 1;
 	//AMR = 0;
 	//AMR |= (0x1f << 3);	// Mask Alarm Registers year, month, doy, dow, dom
-	CCR = 0b10010;
-	CCR = 0b10000;
-	SEC = START_SECONDS;
+	CCR = 0b10010;	// Disable clock[0], reset CTC[1], cal counter disabled[4]
+	CCR = 0b10000;	// Reset CTC[1] is removed
+	/*SEC = START_SECONDS;
 	MIN = START_MINUTES;
 	HOUR = START_HOUR;
 	ALSEC = 0;
 	ALMIN = 0;
-	ALHOUR = 0;
-	CCR = 0b10001;
+	ALHOUR = 0;*/
+	ALSEC = 0;
+	CCR = 0b10001;	// Enable clock[0], cal counter disabled[4]
 }
 
 void setAlarm(void){
@@ -234,8 +288,12 @@ void setAlarm(void){
 		wordWrite("Enter hour: XX");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
+
+		commandLed(0xD);	// Set cursor blinking
+		commandLed(0xA0);
+
 		while(hrDig10temp == 0){
-			hrDig10temp = KEYPUSHED ;
+			hrDig10temp = KEYPUSHED;
 			pauser = hrDig10temp;
 		}
 		if(hrDig10temp == '#')
@@ -258,6 +316,9 @@ void setAlarm(void){
 		wordWrite("X");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
+
+		commandLed(0xA1);
+
 		while(hrDig1temp == 0){
 			while(KEYPUSHED == pauser){};
 			//pauser = 'x';
@@ -282,6 +343,9 @@ void setAlarm(void){
 		wordWrite("Enter minute: XX");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
+
+		commandLed(0xA2);
+
 		while(minDig10temp == 0){
 			while(KEYPUSHED == pauser){};
 			minDig10temp = KEYPUSHED ;
@@ -307,6 +371,8 @@ void setAlarm(void){
 		wordWrite("X");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
+
+		commandLed(0xA3);
 		while(minDig1temp == 0){
 			while(KEYPUSHED == pauser){};
 			pauser = 'x';
@@ -318,6 +384,7 @@ void setAlarm(void){
 		ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
 		ALMIN = (minDig10temp - 48)*10 + (minDig1temp-48);
 	}
+	commandLed(0x0c);
 }
 
 void setTime(void){
@@ -335,9 +402,15 @@ void setTime(void){
 		wordWrite("Enter hour: XX");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		while(hrDig10temp == 0){
+
+		commandLed(0xD);	// Set cursor blinking
+		commandLed(0xCC);	// Move cursor to X
+
+		while(hrDig10temp < '0' || hrDig10temp > '2'){
 			hrDig10temp = KEYPUSHED ;
 			pauser = hrDig10temp;
+			if(hrDig10temp == '#')
+				break;			// Exit time change w/o changes
 		}
 		if(hrDig10temp == '#')
 			break;			// Exit time change w/o changes
@@ -350,11 +423,21 @@ void setTime(void){
 		wordWrite("X");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		while(hrDig1temp == 0){
+
+		commandLed(0xCD);	// Move cursor to second X
+
+		char LimitDigitOne = 0;
+		if(hrDig10temp == '2')
+			LimitDigitOne = '3';
+		else
+			LimitDigitOne = '9';
+
+		while(hrDig1temp < '0' || hrDig1temp > LimitDigitOne){
 			while(KEYPUSHED == pauser){};
-			//pauser = 'x';
 			hrDig1temp = KEYPUSHED ;
 			pauser = hrDig1temp;
+			if(hrDig10temp == '#')
+				break;			// Exit time change w/o changes
 		}
 		if(hrDig1temp == '#')
 			break;			// Exit time change w/o changes
@@ -365,10 +448,14 @@ void setTime(void){
 		wordWrite("Enter minute: XX");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		while(minDig10temp == 0){
+		commandLed(0xCE);	// Move cursor to X
+
+		while(minDig10temp < '0' || minDig10temp > '5'){
 			while(KEYPUSHED ==pauser){};
 			minDig10temp = KEYPUSHED ;
 			pauser = minDig10temp;
+			if(minDig10temp == '#')
+				break;			// Exit time change w/o changes
 		}
 		if(minDig10temp == '#')
 			break;			// Exit time change w/o changes
@@ -381,10 +468,14 @@ void setTime(void){
 		wordWrite("X");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		while(minDig1temp == 0){
+		commandLed(0xCF);	// Move cursor to second X
+
+		while(minDig1temp < '0' || minDig1temp > '9'){
 			while(KEYPUSHED == pauser){};
 			pauser = 'x';
 			minDig1temp = KEYPUSHED ;
+			if(minDig10temp == '#')
+				break;			// Exit time change w/o changes
 		}
 		if(minDig1temp == '#')
 			break;			// Exit time change w/o changes
@@ -396,4 +487,5 @@ void setTime(void){
 		SEC = 0;
 		CCR = 0b10001;
 	}
+	commandLed(0x0c);
 }

@@ -38,18 +38,12 @@ void setupHD44780(void){
 	 * data bits: lsb 7,6,0,1,18,17,15,16 msb
 	 */
 	FIO0DIR |= (0x783C3);
-	commandLed(0x38);
-	commandLed(0x0C);
-	commandLed(0x06);
-	commandLed(0x01);
+	commandLed(0x38);	// Function Set
+	commandLed(0x0C);	// Display ON/OFF control
+	commandLed(0x06);	// Entry mode set
+	commandLed(0x01);	// Clears display
 	//commandLed(0x10);
 	wait_ms(400);
-
-	// Setup Keypad Pins
-	/*for(int i = 0; i < 4; i++){
-		FIO0DIR |= (1 << outputs[i]);
-		FIO0DIR &= ~(1 << inputs[i]);
-	}*/
 }
 
 void charWrite(unsigned int data){//uint8_t data){
