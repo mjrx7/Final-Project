@@ -42,7 +42,6 @@ void setupHD44780(void){
 	commandLed(0x0C);	// Display ON/OFF control
 	commandLed(0x06);	// Entry mode set
 	commandLed(0x01);	// Clears display
-	//commandLed(0x10);
 	wait_ms(400);
 }
 
