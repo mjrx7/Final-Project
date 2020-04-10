@@ -1,7 +1,7 @@
 /*
 ===============================================================================
  Name        : main.c
- Author      : $(author)
+ Author      : Matthew Johnson
  Version     :
  Copyright   : $(copyright)
  Description : main definition
@@ -19,9 +19,11 @@
 #define START_HOUR 12
 
 bool PM = false;
-bool ALARM_ON = false;
+bool ALARM_ON;
 bool ALARM_ACTIVE = false;
 bool SNOOZE = false;
+bool SNOOZE_ALREADY = false;
+unsigned int OLD_ALARM;
 
 char KEYPUSHED = 0;
 int SNOOZE_TIME = 1;
@@ -125,6 +127,10 @@ void toggleAlarm(void){
 		wait(1.5);
 	}
 	else{
+		if(OLD_ALARM != ((ALHOUR << 6) | ALMIN)){
+			ALHOUR = (OLD_ALARM >> 6);
+			ALMIN = OLD_ALARM & 0x3f;
+		}
 		SNOOZE = false;
 		AMR = 1;
 		commandLed(1);
@@ -218,6 +224,10 @@ void alarm(void){
 	}
 
 	if(off != 'D'){
+		if(!SNOOZE_ALREADY){
+			OLD_ALARM = (ALHOUR << 6) | ALMIN;
+			SNOOZE_ALREADY = true;
+		}
 		if(ALMIN + SNOOZE_TIME >= 60){
 			if(ALHOUR + 1 == 24)
 				ALHOUR = 0;
@@ -230,8 +240,12 @@ void alarm(void){
 		SNOOZE = true;
 		off = KEYPUSHED;
 	}
-	else
+	else{
 		SNOOZE = false;
+		SNOOZE_ALREADY = false;
+		ALMIN = OLD_ALARM & 0x3f;
+		ALHOUR = (OLD_ALARM >> 6);
+	}
 	while(off == KEYPUSHED){}
 	_alarm = 0;
 	ILR |= (1 << 1);	// Clear Alarm
@@ -239,7 +253,13 @@ void alarm(void){
 }
 
 void clockSetup(void){
-	AMR = 1;
+	if((AMR >> 3) == 0x1f)
+		ALARM_ON = true;
+	else{
+		AMR = 0;
+		ALARM_ON = false;
+	}
+	OLD_ALARM = (ALHOUR << 6) | ALMIN;
 	CCR = 0b10010;	// Disable clock[0], reset CTC[1], cal counter disabled[4]
 	CCR = 0b10000;	// Reset CTC[1] is removed
 	ALSEC = 0;
@@ -313,8 +333,8 @@ void setAlarm(void){
 		commandLed(0x95);
 
 		char LimitDigitOne = 0;
-		if(hrDig10temp == '2')
-			LimitDigitOne = '3';
+		if(hrDig10temp == '1')
+			LimitDigitOne = '2';
 		else
 			LimitDigitOne = '9';
 		while(hrDig1temp < '0' || hrDig1temp > LimitDigitOne){
@@ -353,7 +373,7 @@ void setAlarm(void){
 		wordWrite("X AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-		commandLed(0x97);
+		commandLed(0x98);
 
 
 		while(minDig1temp < '0' || minDig1temp > '9'){
@@ -430,8 +450,8 @@ void setTime(void){
 		wordWrite("Press # to exit");
 		commandLed(0xC1);	// Move cursor to second X
 		char LimitDigitOne = 0;
-		if(hrDig10temp == '2')
-			LimitDigitOne = '3';
+		if(hrDig10temp == '1')
+			LimitDigitOne = '2';
 		else
 			LimitDigitOne = '9';
 		while(hrDig1temp < '0' || hrDig1temp > LimitDigitOne){
