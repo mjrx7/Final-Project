@@ -28,10 +28,10 @@ unsigned int OLD_ALARM;
 char KEYPUSHED = 0;
 int SNOOZE_TIME = 1;
 
-void printTime(unsigned int[]);
+void printTime(unsigned int);
 void setTime(void);
 void setAlarm(void);
-void setAlarmSub(unsigned int[],bool);
+void setAlarmSub(unsigned int);
 void alarm(void);
 void clockSetup(void);
 void changeTime(void);
@@ -48,7 +48,7 @@ extern "C" void TIMER0_IRQHandler(void){
 }
 
 int main(void) {
-	wait(2);
+	wait_ms(20);
 	setupHD44780();
 	setupKeyPad();
 	TIMER_IRQ_SETUP();
@@ -118,11 +118,7 @@ void toggleAlarm(void){
 		AMR = 0;
 		AMR |= (0x1f << 3);	// Mask Alarm Registers year, month, doy, dow, dom
 		commandLed(1);
-		commandLed(0xC0);
-		charWrite(32);
-		charWrite(32);
-		charWrite(32);
-		charWrite(32);
+		commandLed(0xC4);
 		wordWrite("Alarm ON");
 		wait(1.5);
 	}
@@ -134,11 +130,7 @@ void toggleAlarm(void){
 		SNOOZE = false;
 		AMR = 1;
 		commandLed(1);
-		commandLed(0xC0);
-		charWrite(32);
-		charWrite(32);
-		charWrite(32);
-		charWrite(32);
+		commandLed(0xC4);
 		wordWrite("Alarm OFF");
 		wait(1.5);
 	}
@@ -157,31 +149,11 @@ void changeTime(void){
 	}
 	else
 		PM = false;
+	unsigned int digit = (1 << 20) | (PM << 19) | (timeInHours/10 << 18) | (timeInHours%10 << 14) | (timeInMinutes/10 << 11) | (timeInMinutes%10 << 7) | (timeInSeconds/10 << 4) | (timeInSeconds%10);
 
 	commandLed(1);
-	charWrite(32);
-	charWrite(32);
-	charWrite(32);
-	charWrite(32);
-	unsigned int digit[6] = {timeInHours/10,timeInHours - 10*digit[0],timeInMinutes/10,digit[3] = timeInMinutes - 10*digit[2],
-			digit[4] = timeInSeconds/10,digit[5] = timeInSeconds - 10*digit[4]};
-
+	commandLed(0x84);
 	printTime(digit);
-
-	charWrite(58);
-	charWrite(digit[4] + 48);
-	charWrite(digit[5] + 48);
-	charWrite(32);
-	if(PM){
-		wordWrite("PM");
-	}
-	else{
-		wordWrite("AM");
-	}
-	if(KEYPUSHED != 0){
-		charWrite(32);
-		charWrite(KEYPUSHED);
-	}
 	if(!ALARM_ACTIVE){
 		commandLed(0xC0);
 		wordWrite("A: Set Time");
@@ -266,28 +238,33 @@ void clockSetup(void){
 	CCR = 0b10001;	// Enable clock[0], cal counter disabled[4]
 }
 
-void printTime(unsigned int digit[]){
-	if(digit[0] == 0 && digit[1] == 0){
-		digit[0] = 1;
-		digit[1] = 2;
+void printTime(unsigned int digit){
+	if(((digit >> 18)&1) == 0 && ((digit >> 14)&0xf) == 0){
+		digit &= 0x83FFF;
+		digit|= (1 << 18) | (2 << 14);
 	}
-	charWrite(digit[0] + 48);
-	charWrite(digit[1] + 48);
+	charWrite(((digit >> 18) & 1) + 48);
+	charWrite(((digit >> 14) & 0xf) + 48);
 	charWrite(58);
-	charWrite(digit[2] + 48);
-	charWrite(digit[3] + 48);
+	charWrite(((digit >> 11) & 0x7) + 48);
+	charWrite(((digit >> 7) & 0xf) + 48);
+	if(digit >> 20){
+		charWrite(58);
+		charWrite(((digit >> 4) & 0x7) + 48);
+		charWrite(((digit >> 0) & 0xf) + 48);
+	}
+	if((digit >> 19) & 1)
+		wordWrite(" PM");
+	else
+		wordWrite(" AM");
 }
 
-void setAlarmSub(unsigned int digit[], bool STATUS_OF_TIME_OF_DAY){
+void setAlarmSub(unsigned int digit){
 	commandLed(1);
 	wordWrite("Change alarm time");
 	commandLed(0xC0);
 	wordWrite("Current: ");
 	printTime(digit);
-	if(STATUS_OF_TIME_OF_DAY)
-		wordWrite(" PM");
-	else
-		wordWrite(" AM");
 	commandLed(0x94);
 }
 
@@ -308,9 +285,8 @@ void setAlarm(void){
 			if(tempTime > 12)
 				tempTime -= 12;
 		}
-		unsigned int digit[4] = {tempTime/10,tempTime - 10*digit[0],ALMIN/10,ALMIN - 10*digit[2]};
-
-		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		unsigned int digit = (STATUS_OF_TIME_OF_DAY << 19) | ((tempTime/10) << 18) | ((tempTime%10) << 14) | (ALMIN/10 << 11) | ((ALMIN%10) << 7);
+		setAlarmSub(digit);
 		wordWrite("XX:XX AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
@@ -325,7 +301,7 @@ void setAlarm(void){
 		if(hrDig10temp == '#')
 			break;			// Exit time change w/o changes
 
-		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		setAlarmSub(digit);
 		charWrite(hrDig10temp);
 		wordWrite("X:XX AM/PM");
 		commandLed(0xD4);
@@ -347,7 +323,7 @@ void setAlarm(void){
 		if(hrDig1temp == '#')
 			break;			// Exit time change w/o changes
 
-		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		setAlarmSub(digit);
 		charWrite(hrDig10temp);
 		charWrite(hrDig1temp);
 		wordWrite(":XX AM/PM");
@@ -365,7 +341,7 @@ void setAlarm(void){
 		if(minDig10temp == '#')
 			break;			// Exit time change w/o changes
 
-		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		setAlarmSub(digit);
 		charWrite(hrDig10temp);
 		charWrite(hrDig1temp);
 		charWrite(58);
@@ -386,7 +362,7 @@ void setAlarm(void){
 		if(minDig1temp == '#')
 			break;			// Exit time change w/o changes
 
-		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		setAlarmSub(digit);
 		charWrite(hrDig10temp);
 		charWrite(hrDig1temp);
 		charWrite(58);
