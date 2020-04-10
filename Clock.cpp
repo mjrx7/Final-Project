@@ -246,6 +246,10 @@ void clockSetup(void){
 }
 
 void printTime(unsigned int digit[]){
+	if(digit[0] == 0 && digit[1] == 0){
+		digit[0] = 1;
+		digit[1] = 2;
+	}
 	charWrite(digit[0] + 48);
 	charWrite(digit[1] + 48);
 	charWrite(58);
@@ -389,14 +393,12 @@ void setTime(void){
 		commandLed(1);
 		wordWrite("Change current time");
 		commandLed(0xC0);
-		wordWrite("Enter hour: XX");
+		wordWrite("XX:XX AM/PM");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-
 		commandLed(0xD);	// Set cursor blinking
-		commandLed(0xCC);	// Move cursor to X
-
-		while(hrDig10temp < '0' || hrDig10temp > '2'){
+		commandLed(0xC0);	// Move cursor to X
+		while(hrDig10temp < '0' || hrDig10temp > '1'){
 			hrDig10temp = KEYPUSHED ;
 			pauser = hrDig10temp;
 			if(hrDig10temp == '#')
@@ -408,20 +410,16 @@ void setTime(void){
 		commandLed(1);
 		wordWrite("Change current time");
 		commandLed(0xC0);
-		wordWrite("Enter hour: ");
 		charWrite(hrDig10temp);
-		wordWrite("X");
+		wordWrite("X:XX AM/PM");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-
-		commandLed(0xCD);	// Move cursor to second X
-
+		commandLed(0xC1);	// Move cursor to second X
 		char LimitDigitOne = 0;
 		if(hrDig10temp == '2')
 			LimitDigitOne = '3';
 		else
 			LimitDigitOne = '9';
-
 		while(hrDig1temp < '0' || hrDig1temp > LimitDigitOne){
 			while(KEYPUSHED == pauser){};
 			hrDig1temp = KEYPUSHED ;
@@ -435,13 +433,15 @@ void setTime(void){
 		commandLed(1);
 		wordWrite("Change current time");
 		commandLed(0xC0);
-		wordWrite("Enter minute: XX");
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		wordWrite(":XX AM/PM");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		commandLed(0xCE);	// Move cursor to X
+		commandLed(0xC3);	// Move cursor to X
 
 		while(minDig10temp < '0' || minDig10temp > '5'){
-			while(KEYPUSHED ==pauser){};
+			while(KEYPUSHED ==pauser){}
 			minDig10temp = KEYPUSHED ;
 			pauser = minDig10temp;
 			if(minDig10temp == '#')
@@ -453,15 +453,17 @@ void setTime(void){
 		commandLed(1);
 		wordWrite("Change current time");
 		commandLed(0xC0);
-		wordWrite("Enter minute: ");
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		charWrite(58);
 		charWrite(minDig10temp);
-		wordWrite("X");
+		wordWrite("X AM/PM");
 		commandLed(0x94);
 		wordWrite("Press # to exit");
-		commandLed(0xCF);	// Move cursor to second X
+		commandLed(0xC4);	// Move cursor to second X
 
 		while(minDig1temp < '0' || minDig1temp > '9'){
-			while(KEYPUSHED == pauser){};
+			while(KEYPUSHED == pauser){}
 			pauser = 'x';
 			minDig1temp = KEYPUSHED ;
 			if(minDig10temp == '#')
@@ -469,10 +471,48 @@ void setTime(void){
 		}
 		if(minDig1temp == '#')
 			break;			// Exit time change w/o changes
+		pauser = minDig1temp;
+		commandLed(1);
+		wordWrite("Change current time");
+		commandLed(0xC0);
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		charWrite(58);
+		charWrite(minDig10temp);
+		charWrite(minDig1temp);
+		wordWrite(" AM/PM");
+		commandLed(0x94);
+		wordWrite("1: AM      2: PM");
+		commandLed(0xD4);
+		wordWrite("Press # to exit");
+		commandLed(0x0C);
+		char TimeOfDay = 0;
+
+		while(TimeOfDay < '1' || TimeOfDay > '2'){
+			while(KEYPUSHED == pauser){}
+			pauser = 'x';
+			TimeOfDay = KEYPUSHED;
+			if(TimeOfDay == '#')
+				break;
+		}
+		if(TimeOfDay == '#')
+			break;
 
 		CCR = 0b10010;
 		CCR = 0b10000;
-		HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+
+		if(TimeOfDay == '1'){
+			if(hrDig10temp == '1' && hrDig1temp == '2'){
+				hrDig10temp = '0';
+				hrDig1temp = '0';
+			}
+			HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+		}
+		else if(TimeOfDay == '2'){
+			HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
+		}
+
+
 		MIN = (minDig10temp - 48)*10 + (minDig1temp-48);
 		SEC = 0;
 		CCR = 0b10001;
