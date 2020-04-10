@@ -408,9 +408,13 @@ void setAlarm(void){
 			break;
 		if(AMorPM == '2')
 			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
-		else
+		else{
 			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+			if(ALHOUR == 12)
+				ALHOUR = 0;
+		}
 		ALMIN = (minDig10temp - 48)*10 + (minDig1temp-48);
+		OLD_ALARM = (ALHOUR << 6) | ALMIN;
 	}
 	commandLed(0x0c);
 }
@@ -520,7 +524,7 @@ void setTime(void){
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
 		commandLed(0x0C);
-		char TimeOfDay = 0;
+		char TimeOfDay = 0;	// AM or PM
 
 		while(TimeOfDay < '1' || TimeOfDay > '2'){
 			while(KEYPUSHED == pauser){}
@@ -543,7 +547,11 @@ void setTime(void){
 			HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
 		}
 		else if(TimeOfDay == '2'){
-			HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
+			if(hrDig10temp == '1' && hrDig1temp == '2'){
+				HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+			}
+			else
+				HOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
 		}
 
 
