@@ -29,6 +29,7 @@ int SNOOZE_TIME = 1;
 void printTime(unsigned int[]);
 void setTime(void);
 void setAlarm(void);
+void setAlarmSub(unsigned int[],bool);
 void alarm(void);
 void clockSetup(void);
 void changeTime(void);
@@ -257,30 +258,43 @@ void printTime(unsigned int digit[]){
 	charWrite(digit[3] + 48);
 }
 
+void setAlarmSub(unsigned int digit[], bool STATUS_OF_TIME_OF_DAY){
+	commandLed(1);
+	wordWrite("Change alarm time");
+	commandLed(0xC0);
+	wordWrite("Current: ");
+	printTime(digit);
+	if(STATUS_OF_TIME_OF_DAY)
+		wordWrite(" PM");
+	else
+		wordWrite(" AM");
+	commandLed(0x94);
+}
+
 void setAlarm(void){
 	while(KEYPUSHED=='B'){
 		while(KEYPUSHED == 'B'){};
+		commandLed(0xD);	// Set cursor blinking
 		char hrDig10temp = 0;
 		char hrDig1temp = 0;
 		char minDig10temp = 0;
 		char minDig1temp = 0;
+		char AMorPM;
 		char pauser;
+		bool STATUS_OF_TIME_OF_DAY = false;
+		unsigned int tempTime = ALHOUR;
+		if(tempTime >= 12){
+			STATUS_OF_TIME_OF_DAY = true;
+			if(tempTime > 12)
+				tempTime -= 12;
+		}
+		unsigned int digit[4] = {tempTime/10,tempTime - 10*digit[0],ALMIN/10,ALMIN - 10*digit[2]};
 
-		commandLed(1);
-		wordWrite("Change alarm time");
-		commandLed(0xC0);
-		wordWrite("Current alarm: ");
-
-		unsigned int digit[4] = {ALHOUR/10,ALHOUR - 10*digit[0],ALMIN/10,ALMIN - 10*digit[2]};
-		printTime(digit);
-
-		commandLed(0x94);
-		wordWrite("Enter hour: XX");
+		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		wordWrite("XX:XX AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-
-		commandLed(0xD);	// Set cursor blinking
-		commandLed(0xA0);
+		commandLed(0x94);	// Set cursor at first X
 
 		while(hrDig10temp < '0' || hrDig10temp > '2'){
 			hrDig10temp = KEYPUSHED;
@@ -291,31 +305,20 @@ void setAlarm(void){
 		if(hrDig10temp == '#')
 			break;			// Exit time change w/o changes
 
-		commandLed(1);
-		wordWrite("Change current time");
-		commandLed(0xC0);
-
-		wordWrite("Current alarm: ");
-		printTime(digit);
-
-		commandLed(0x94);
-		wordWrite("Enter hour: ");
+		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
 		charWrite(hrDig10temp);
-		wordWrite("X");
+		wordWrite("X:XX AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-
-		commandLed(0xA1);
+		commandLed(0x95);
 
 		char LimitDigitOne = 0;
 		if(hrDig10temp == '2')
 			LimitDigitOne = '3';
 		else
 			LimitDigitOne = '9';
-
 		while(hrDig1temp < '0' || hrDig1temp > LimitDigitOne){
 			while(KEYPUSHED == pauser){};
-			//pauser = 'x';
 			hrDig1temp = KEYPUSHED;
 			pauser = hrDig1temp;
 			if(hrDig1temp == '#')
@@ -324,19 +327,13 @@ void setAlarm(void){
 		if(hrDig1temp == '#')
 			break;			// Exit time change w/o changes
 
-		commandLed(1);
-		wordWrite("Change current time");
-		commandLed(0xC0);
-
-		wordWrite("Current alarm: ");
-		printTime(digit);
-
-		commandLed(0x94);
-		wordWrite("Enter minute: XX");
+		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		wordWrite(":XX AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-
-		commandLed(0xA2);
+		commandLed(0x97);
 
 		while(minDig10temp < '0' || minDig10temp > '5'){
 			while(KEYPUSHED == pauser){};
@@ -348,26 +345,20 @@ void setAlarm(void){
 		if(minDig10temp == '#')
 			break;			// Exit time change w/o changes
 
-		commandLed(1);
-		wordWrite("Change current time");
-		commandLed(0xC0);
-
-		wordWrite("Current alarm: ");
-		printTime(digit);
-
-		commandLed(0x94);
-		wordWrite("Enter minute: ");
+		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		charWrite(58);
 		charWrite(minDig10temp);
-		wordWrite("X");
+		wordWrite("X AM/PM");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-
-		commandLed(0xA3);
+		commandLed(0x97);
 
 
 		while(minDig1temp < '0' || minDig1temp > '9'){
-			while(KEYPUSHED == pauser){};
-			pauser = 'x';
+			while(KEYPUSHED == pauser){}
+			pauser = minDig1temp;
 			minDig1temp = KEYPUSHED;
 			if(minDig1temp == '#')
 				break;			// Exit time change w/o changes
@@ -375,7 +366,30 @@ void setAlarm(void){
 		if(minDig1temp == '#')
 			break;			// Exit time change w/o changes
 
-		ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
+		setAlarmSub(digit,STATUS_OF_TIME_OF_DAY);
+		charWrite(hrDig10temp);
+		charWrite(hrDig1temp);
+		charWrite(58);
+		charWrite(minDig10temp);
+		charWrite(minDig1temp);
+		wordWrite(" 1:AM 2:PM");
+		commandLed(0xD4);
+		wordWrite("Press # to exit");
+		commandLed(0x97);
+		commandLed(0x0c);
+		while(AMorPM < '1' || AMorPM > '2'){
+			while(KEYPUSHED == pauser){}
+			pauser = AMorPM;
+			AMorPM = KEYPUSHED;
+			if(AMorPM == '#')
+				break;
+		}
+		if(AMorPM == '#')
+			break;
+		if(AMorPM == '2')
+			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
+		else
+			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
 		ALMIN = (minDig10temp - 48)*10 + (minDig1temp-48);
 	}
 	commandLed(0x0c);
