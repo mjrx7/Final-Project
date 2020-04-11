@@ -25,6 +25,12 @@ bool SNOOZE = false;
 bool SNOOZE_ALREADY = false;
 unsigned int OLD_ALARM;
 
+unsigned int oldState = 0;
+unsigned int newState = 0;
+unsigned volatile int change = 0;
+volatile bool PAGE1=true;
+volatile int QEICOUNT = 0;
+
 char KEYPUSHED = 0;
 int SNOOZE_TIME = 1;
 
@@ -47,12 +53,37 @@ extern "C" void TIMER0_IRQHandler(void){
 	}
 }
 
+extern "C" void EINT3_IRQHandler(void){
+	if((IOIntStatus >> 0) & 1){
+		newState = ((FIO0PIN >> 22) & 0x2) | ((FIO0PIN >> 26) & 0x1);
+		change = (((oldState << 1) | (oldState >> 1)) & 0x3) ^ newState;
+		switch (change) {
+			case 0b01: 	QEICOUNT++;
+						if((QEICOUNT%4) == 0)
+							PAGE1 = !PAGE1;
+						break;
+			case 0b10: 	QEICOUNT--;
+						if((QEICOUNT%4) == 0)
+							PAGE1 = !PAGE1;
+						break;
+		}
+		oldState = newState;
+		IO0IntClr = (0b1001 << 23);
+	}
+}
+
 int main(void) {
 	wait_ms(20);
 	setupHD44780();
 	setupKeyPad();
 	TIMER_IRQ_SETUP();
 	clockSetup();
+
+	IO0IntEnR |= (0b1001 << 23);
+	IO0IntEnF |= (0b1001 << 23);
+	IO0IntClr = (0b1001 << 23);
+	oldState = ((FIO0PIN >> 22) & 0x2) | ((FIO0PIN >> 26) & 0x1);
+	ISER0 = (1 << 21);
 
     while(1) {
     	if(ALARM_INTERRUPT)
@@ -161,18 +192,24 @@ void changeTime(void){
 	commandLed(0x84);
 	printTime(digit);
 	if(!ALARM_ACTIVE){
-		commandLed(0xC0);
-		wordWrite("A: Set Time");
-		commandLed(0x94);
-		wordWrite("B: Set Alarm");
-		commandLed(0xD4);
-		wordWrite("C: On/Off (");
-		if(ALARM_ON)
-			wordWrite("ON)");
-		else
-			wordWrite("OFF)");
-		if(SNOOZE)
-			wordWrite("  Zzzz");
+		if(PAGE1){
+			commandLed(0xC0);
+			wordWrite("A: Set Time");
+			commandLed(0x94);
+			wordWrite("B: Set Alarm");
+			commandLed(0xD4);
+			wordWrite("C: On/Off (");
+			if(ALARM_ON)
+				wordWrite("ON)");
+			else
+				wordWrite("OFF)");
+			if(SNOOZE)
+				wordWrite("  Zzzz");
+		}
+		else{
+			commandLed(0xC0);
+			wordWrite("D: Set Snooze");
+		}
 	}
 	else{
 		commandLed(0x94);

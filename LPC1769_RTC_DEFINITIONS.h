@@ -30,4 +30,15 @@
 #define T0TC (*(volatile unsigned int *) 0x40004008)
 #define T0IR (*(volatile unsigned int *) 0x40004000)
 
+#define FIO0DIR (*(volatile unsigned int *)0x2009c000)
+#define FIO0PIN (*(volatile unsigned int *)0x2009c014)
+
+#define ISER0 (*(volatile unsigned int *) 0xE000E100)
+#define IO0IntEnR (*(volatile unsigned int *) 0x40028090)
+#define IO0IntEnF (*(volatile unsigned int *) 0x40028094)
+#define IO0IntClr (*(volatile unsigned int *) 0x4002808C)
+#define IO0IntStatR (*(volatile unsigned int *) 0x40028084)
+#define IO0IntStatF (*(volatile unsigned int *) 0x40028088)
+#define IOIntStatus (*(volatile unsigned int *) 0x40028080)
+
 #endif /* LPC1769_RTC_DEFINITIONS_H_ */
