@@ -31,7 +31,7 @@ unsigned volatile int change = 0;	// Change in State
 volatile bool PAGE1 = true;			// Set if PAGE1 display
 volatile int QEICOUNT = 0;			// Index for QEI
 char KEYPUSHED = 0;				// Returns 4x4 keypushed
-
+volatile bool SNOOZE_QEI = false;
 void changeTime(void);			// Change time on display
 void printTime(unsigned int);	// Print sub-routine
 void setTime(void);				// Set time routine
@@ -61,12 +61,28 @@ extern "C" void EINT3_IRQHandler(void){
 		change = (((oldState << 1) | (oldState >> 1)) & 0x3) ^ newState;
 		switch (change) {
 			case 0b01: 	QEICOUNT++;
-						if((QEICOUNT%4) == 0)
-							PAGE1 = !PAGE1;
+						if((QEICOUNT%4) == 0){
+							if(SNOOZE_QEI){
+								if (SNOOZE_TIME == 9)
+									SNOOZE_TIME = 1;
+								else
+									SNOOZE_TIME++;
+							}
+							else
+								PAGE1 = !PAGE1;
+						}
 						break;
 			case 0b10: 	QEICOUNT--;
-						if((QEICOUNT%4) == 0)
-							PAGE1 = !PAGE1;
+						if((QEICOUNT%4) == 0){
+							if(SNOOZE_QEI){
+								if(SNOOZE_TIME == 1)
+									SNOOZE_TIME = 9;
+								else
+									SNOOZE_TIME--;
+							}
+							else
+								PAGE1 = !PAGE1;
+						}
 						break;
 		}
 		oldState = newState;
@@ -99,6 +115,7 @@ int main(void) {
 
 void setSnooze(void){
 	do{
+		unsigned int backup = SNOOZE_TIME;
 		while(KEYPUSHED == 'D'){};
 		char snoozeDig1temp = 0;
 
@@ -113,27 +130,43 @@ void setSnooze(void){
 			wordWrite(" mins");
 
 		commandLed(0x94);
-		wordWrite("Input: X (1-9 max)");
+		wordWrite("Input:   (1-9 max)");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
 
-		commandLed(0xD);	// Set cursor blinking
+		//commandLed(0xD);	// Set cursor blinking
+		commandLed(0b10100);
 		commandLed(0x9b);
 
+		SNOOZE_QEI = true;
 		while(snoozeDig1temp < '0' || snoozeDig1temp > '9'){
 			snoozeDig1temp = KEYPUSHED;
+			charWrite((SNOOZE_TIME) + 48);
+			commandLed(0x9b);
 			if(snoozeDig1temp == '#')
 				break;
+			if(snoozeDig1temp == '*'){
+				break;
+			}
 		}
-		if(snoozeDig1temp == '#')
+		SNOOZE_QEI = false;
+		if(snoozeDig1temp == '*'){
+			wait_ms(500);
 			break;
+		}
+		if(snoozeDig1temp == '#'){
+			SNOOZE_TIME = backup;
+			break;
+		}
+
 		if(snoozeDig1temp == '0')
 			snoozeDig1temp = '1';
+		charWrite(snoozeDig1temp);
+		wait_ms(500);
 		while(KEYPUSHED == snoozeDig1temp){}
 		SNOOZE_TIME = snoozeDig1temp - 48;
-
-		commandLed(0x0c);
 	}while(KEYPUSHED == 'D');
+	commandLed(0x0c);
 }
 
 void _IRQ_SETUP(void){
