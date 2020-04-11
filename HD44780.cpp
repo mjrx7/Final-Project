@@ -37,6 +37,7 @@ void setupHD44780(void){
 	 * En: p0.8
 	 * data bits: lsb 7,6,0,1,18,17,15,16 msb
 	 */
+	wait_ms(20);		// Display needs 10 ms to come online
 	FIO0DIR |= (0x783C3);
 	commandLed(0x38);	// Function Set
 	commandLed(0x0C);	// Display ON/OFF control

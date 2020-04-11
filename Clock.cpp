@@ -18,34 +18,33 @@
 #define START_MINUTES 0
 #define START_HOUR 12
 
-bool PM = false;
-bool ALARM_ON;
-bool ALARM_ACTIVE = false;
-bool SNOOZE = false;
-bool SNOOZE_ALREADY = false;
-unsigned int OLD_ALARM;
+bool PM = false;				// Display AM/PM status
+bool ALARM_ON;					// Set if Alarm is ON
+bool ALARM_ACTIVE = false;		// Set of Alarm is ACTIVE
+bool SNOOZE = false;			// Set if Snooze is ON
+bool SNOOZE_ALREADY = false;	// Set if Snooze has ran ONCE
+int SNOOZE_TIME = 1;			// Time to SNOOZE
+unsigned int OLD_ALARM;			// Saves old alarm
+unsigned int oldState = 0;			// Old QEI State
+unsigned int newState = 0;			// New QEI State
+unsigned volatile int change = 0;	// Change in State
+volatile bool PAGE1 = true;			// Set if PAGE1 display
+volatile int QEICOUNT = 0;			// Index for QEI
+char KEYPUSHED = 0;				// Returns 4x4 keypushed
 
-unsigned int oldState = 0;
-unsigned int newState = 0;
-unsigned volatile int change = 0;
-volatile bool PAGE1=true;
-volatile int QEICOUNT = 0;
-
-char KEYPUSHED = 0;
-int SNOOZE_TIME = 1;
-
-void printTime(unsigned int);
-void setTime(void);
-void setAlarm(void);
-void setAlarmSub(unsigned int);
-void alarm(void);
-void clockSetup(void);
-void changeTime(void);
-void toggleAlarm(void);
-void setSnooze(void);
-void TIMER_IRQ_SETUP(void);
+void changeTime(void);			// Change time on display
+void printTime(unsigned int);	// Print sub-routine
+void setTime(void);				// Set time routine
+void setAlarm(void);			// Set alarm routine
+void setAlarmSub(unsigned int);	// Sub-routine for setAlarm
+void toggleAlarm(void);			// Toggle alarm ON/OFF
+void alarm(void);				// ALARM function
+void setSnooze(void);			// Set Snooze function
+void clockSetup(void);			// RTC Clock Setup function
+void _IRQ_SETUP(void);			// IRQ Setup for 4x4 & QEI
 
 extern "C" void TIMER0_IRQHandler(void){
+	// Setup timer interrupt every 500 us
 	if((T0IR >> 0) & 1){
 		T0MR0 = T0MR0 + 500;
 		KEYPUSHED = keyPress();
@@ -54,6 +53,9 @@ extern "C" void TIMER0_IRQHandler(void){
 }
 
 extern "C" void EINT3_IRQHandler(void){
+	// If Interrupt is detected on GPIO0
+	// New state of ports 23/26 are detected
+	// & combined as XX, compared to oldstate
 	if((IOIntStatus >> 0) & 1){
 		newState = ((FIO0PIN >> 22) & 0x2) | ((FIO0PIN >> 26) & 0x1);
 		change = (((oldState << 1) | (oldState >> 1)) & 0x3) ^ newState;
@@ -73,19 +75,12 @@ extern "C" void EINT3_IRQHandler(void){
 }
 
 int main(void) {
-	wait_ms(20);
-	setupHD44780();
-	setupKeyPad();
-	TIMER_IRQ_SETUP();
-	clockSetup();
+	setupHD44780();	// Setup HD44780 display
+	setupKeyPad();	// Setup 4x4 Keypad
+	_IRQ_SETUP();	// Setup IRQ for Keypad & QEI
+	clockSetup();	// Setup RTC
 
-	IO0IntEnR |= (0b1001 << 23);
-	IO0IntEnF |= (0b1001 << 23);
-	IO0IntClr = (0b1001 << 23);
-	oldState = ((FIO0PIN >> 22) & 0x2) | ((FIO0PIN >> 26) & 0x1);
-	ISER0 = (1 << 21);
-
-    while(1) {
+	while(1) {
     	if(ALARM_INTERRUPT)
     		alarm();
     	if(KEYPUSHED == 'A')
@@ -141,18 +136,23 @@ void setSnooze(void){
 	}while(KEYPUSHED == 'D');
 }
 
-void TIMER_IRQ_SETUP(void){
+void _IRQ_SETUP(void){
 	T0TCR |= 1;	// Start Timer
 	T0MR0 = T0TC + 500; // Interrupt 1000 us into future
 	T0MCR |= (1 << 0);	// enable interrupt on MR0 match
 	ISER0 = (1 << 1);	// Enable interrupts for Timer 0
+
+	IO0IntEnR |= (0b1001 << 23);	// Setup GPIO0 Interrupt on 23/26 Rising
+	IO0IntEnF |= (0b1001 << 23);	// Setup GPIO0 Interrupt on 23/26 Falling
+	IO0IntClr = (0b1001 << 23);		// Clear GPIO0 Interrupts
+	oldState = ((FIO0PIN >> 22) & 0x2) | ((FIO0PIN >> 26) & 0x1);	// Save oldState
+	ISER0 = (1 << 21);				// Enable GPIO0/EINT3 Interrupt
 }
 
 void toggleAlarm(void){
 	while(KEYPUSHED == 'C'){};
 	if(!ALARM_ON){
-		AMR = 0x1f000;
-		//AMR |= (0x1f << 3);	// Mask Alarm Registers year, month, doy, dow, dom
+		AMR = 0x1f000;	// Mask Alarm Registers year, month, doy, dow, dom
 		commandLed(1);
 		commandLed(0xC4);
 		wordWrite("Alarm ON");
@@ -181,7 +181,7 @@ void changeTime(void){
 
 	if(timeInHours >= 12){
 		if(timeInHours!=12)
-			time |= ((timeInHours - 12) << 16);
+			time = (time & 0xFFE0FFFF) | ((timeInHours - 12) << 16);
 		PM = true;
 	}
 	else
