@@ -44,6 +44,31 @@ void setupHD44780(void){
 	commandLed(0x06);	// Entry mode set
 	commandLed(0x01);	// Clears display
 	wait_ms(400);
+
+
+	// Custome character setup
+	commandLed(0x40);
+	//Up Arrow
+	charWrite(0x4);
+	charWrite(0x4);
+	charWrite(0x4);
+	charWrite(0x4);
+	charWrite(0x1f);
+	charWrite(0xE);
+	charWrite(0x4);
+	charWrite(0x0);
+	// Down Arrow
+	charWrite(0x0);
+	charWrite(0x4);
+	charWrite(0xE);
+	charWrite(0x1f);
+	charWrite(0x4);
+	charWrite(0x4);
+	charWrite(0x4);
+	charWrite(0x4);
+
+	commandLed(0);
+	// Save custom character
 }
 
 void charWrite(unsigned int data){//uint8_t data){

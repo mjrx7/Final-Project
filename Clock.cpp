@@ -120,29 +120,25 @@ void setSnooze(void){
 		char snoozeDig1temp = 0;
 
 		commandLed(1);
-		wordWrite("Change snooze time");
-		commandLed(0xC0);
-		wordWrite("Current: ");
+		wordWrite("Snooze time: ");
 		charWrite(SNOOZE_TIME + 48);
-		if(SNOOZE_TIME == 1)
-			wordWrite(" min");
-		else
-			wordWrite(" mins");
+		wordWrite(" min");
 
+		commandLed(0xC0);
+		wordWrite("Rotate QEI knob");
 		commandLed(0x94);
-		wordWrite("Input:   (1-9 max)");
+		wordWrite("Press * to accept");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
 
-		//commandLed(0xD);	// Set cursor blinking
 		commandLed(0b10100);
-		commandLed(0x9b);
+		commandLed(0x8D);
 
 		SNOOZE_QEI = true;
 		while(snoozeDig1temp < '0' || snoozeDig1temp > '9'){
 			snoozeDig1temp = KEYPUSHED;
 			charWrite((SNOOZE_TIME) + 48);
-			commandLed(0x9b);
+			commandLed(0x8D);
 			if(snoozeDig1temp == '#')
 				break;
 			if(snoozeDig1temp == '*'){
@@ -185,7 +181,8 @@ void _IRQ_SETUP(void){
 void toggleAlarm(void){
 	while(KEYPUSHED == 'C'){};
 	if(!ALARM_ON){
-		AMR = 0x1f000;	// Mask Alarm Registers year, month, doy, dow, dom
+		AMR = 0;
+		AMR |= (0x1f << 3);	// Mask Alarm Registers year, month, doy, dow, dom
 		commandLed(1);
 		commandLed(0xC4);
 		wordWrite("Alarm ON");
@@ -233,15 +230,23 @@ void changeTime(void){
 			commandLed(0xD4);
 			wordWrite("C: On/Off (");
 			if(ALARM_ON)
-				wordWrite("ON)");
+				wordWrite("ON) ");
 			else
 				wordWrite("OFF)");
-			if(SNOOZE)
-				wordWrite("  Zzzz");
+			if(SNOOZE){
+				wordWrite("Zzz ");
+				charWrite(0);
+			}
+			else{
+				wordWrite("    ");
+				charWrite(0);
+			}
 		}
 		else{
 			commandLed(0xC0);
 			wordWrite("D: Set Snooze");
+			commandLed(0x93);
+			charWrite(1);
 		}
 	}
 	else{
