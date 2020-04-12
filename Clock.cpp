@@ -116,38 +116,48 @@ int main(void) {
 }
 
 void GREETING(void){
-	commandLed(1);
-	commandLed(0x86);
-	charWrite('/');
-	charWrite(4);
-	wordWrite("_/");
-	charWrite(4);
-	commandLed(0xC1);
-	wordWrite("/");
-	charWrite(4); // \\  / ");
-	wordWrite("  / ");
-	charWrite(3);
-	charWrite(32);
-	charWrite(3);
-	charWrite(32);
-	charWrite(4);
-	commandLed(0x94);
-	wordWrite("//");
-	charWrite(4);
-	charWrite(4);
-	charWrite(32);
-	charWrite(4);
-	charWrite(5);
-	wordWrite("(*)");
-	charWrite(5);
-	charWrite('/');
-	commandLed(0xD4);
-	wordWrite("`  ");
-	charWrite(4);
-	wordWrite("/   ^ /");
-	commandLed(0xe1);
-	wordWrite("MJ 2020");
-	wait(3);
+	for(int i = 0; i < 3; i++){
+		commandLed(1);
+		commandLed(0x86);
+		charWrite('/');
+		charWrite(4);
+		wordWrite("_/");
+		charWrite(4);
+		commandLed(0xC1);
+		wordWrite("/");
+		charWrite(4); // \\  / ");
+		wordWrite("  / ");
+		if((i%2) == 0)
+			charWrite(3);
+		else
+			charWrite('-');
+		charWrite(32);
+		charWrite(3);
+		charWrite(32);
+		charWrite(4);
+		commandLed(0x94);
+		wordWrite("//");
+		charWrite(4);
+		charWrite(4);
+		charWrite(32);
+		charWrite(4);
+		charWrite(5);
+		wordWrite("(*)");
+		charWrite(5);
+		charWrite('/');
+		commandLed(0xD4);
+		wordWrite("`  ");
+		charWrite(4);
+		wordWrite("/   ^ /");
+		commandLed(0xe1);
+		wordWrite("MJ 2020");
+		if(i == 0)
+			wait(1.25);
+		else if(i == 1)
+			wait(0.5);
+		else
+			wait(3);
+	}
 }
 
 void setSnooze(void){
@@ -234,13 +244,14 @@ void toggleAlarm(void){
 			ALMIN = OLD_ALARM & 0x3f;
 		}
 		SNOOZE = false;
-		AMR = 1;
+		AMR = 0x7f;
 		commandLed(1);
 		commandLed(0xC4);
 		wordWrite("Alarm OFF");
 		wait(1.5);
 	}
 	ALARM_ON = !ALARM_ON;
+	GPREG0 = (AMR << 11) | (ALHOUR << 6) | ALMIN;
 }
 
 void changeTime(void){
@@ -352,10 +363,13 @@ void alarm(void){
 }
 
 void clockSetup(void){
-	if((AMR >> 3) == 0x1f)
+	AMR = (GPREG0 >> 11);
+	ALHOUR = (GPREG0 >> 6) & 0x1f;
+	ALMIN = (GPREG0 >> 0) & 0x3f;
+	if(AMR == 0xf8)
 		ALARM_ON = true;
 	else{
-		AMR = 0;
+		AMR = 0x7f;
 		ALARM_ON = false;
 	}
 	OLD_ALARM = (ALHOUR << 6) | ALMIN;
@@ -518,6 +532,9 @@ void setAlarm(void){
 		}
 		ALMIN = (minDig10temp - 48)*10 + (minDig1temp-48);
 		OLD_ALARM = (ALHOUR << 6) | ALMIN;
+		unsigned int amrtemp = AMR;
+		amrtemp &= 0x7;
+		GPREG0 = (AMR << 11) | (ALHOUR << 6) | ALMIN;
 	}
 	commandLed(0x0c);
 }

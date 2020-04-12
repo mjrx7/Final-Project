@@ -41,4 +41,6 @@
 #define IO0IntStatF (*(volatile unsigned int *) 0x40028088)
 #define IOIntStatus (*(volatile unsigned int *) 0x40028080)
 
+#define GPREG0 (*(volatile unsigned int *) 0x40024044)
+
 #endif /* LPC1769_RTC_DEFINITIONS_H_ */
