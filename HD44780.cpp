@@ -48,7 +48,7 @@ void setupHD44780(void){
 
 	// Custome character setup
 	commandLed(0x40);
-	//Up Arrow
+	//Up Arrow(0)
 	charWrite(0x4);
 	charWrite(0x4);
 	charWrite(0x4);
@@ -57,7 +57,7 @@ void setupHD44780(void){
 	charWrite(0xE);
 	charWrite(0x4);
 	charWrite(0x0);
-	// Down Arrow
+	// Down Arrow(1)
 	charWrite(0x0);
 	charWrite(0x4);
 	charWrite(0xE);
@@ -66,7 +66,42 @@ void setupHD44780(void){
 	charWrite(0x4);
 	charWrite(0x4);
 	charWrite(0x4);
-
+	// Alarm Bell(2)
+	charWrite(0x4);
+	charWrite(0xe);
+	charWrite(0xe);
+	charWrite(0xe);
+	charWrite(0xe);
+	charWrite(0x1f);
+	charWrite(0x4);
+	charWrite(0x0);
+	// Cat eye(3)
+	charWrite(0b00000);
+	charWrite(0b00000);
+	charWrite(0b01110);
+	charWrite(0b01010);
+	charWrite(0b01110);
+	charWrite(0b00000);
+	charWrite(0b00000);
+	charWrite(0b00000);
+	// \ character(4)
+	charWrite(0b00000);
+	charWrite(0b10000);
+	charWrite(0b01000);
+	charWrite(0b00100);
+	charWrite(0b00010);
+	charWrite(0b00001);
+	charWrite(0b00000);
+	charWrite(0b00000);
+	// ~ Character(5)
+	charWrite(0b00000);
+	charWrite(0b00000);
+	charWrite(0b01000);
+	charWrite(0b10101);
+	charWrite(0b00010);
+	charWrite(0b00000);
+	charWrite(0b00000);
+	charWrite(0b00000);
 	commandLed(0);
 	// Save custom character
 }

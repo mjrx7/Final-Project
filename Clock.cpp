@@ -42,6 +42,7 @@ void alarm(void);				// ALARM function
 void setSnooze(void);			// Set Snooze function
 void clockSetup(void);			// RTC Clock Setup function
 void _IRQ_SETUP(void);			// IRQ Setup for 4x4 & QEI
+void GREETING(void);
 
 extern "C" void TIMER0_IRQHandler(void){
 	// Setup timer interrupt every 500 us
@@ -95,6 +96,7 @@ int main(void) {
 	setupKeyPad();	// Setup 4x4 Keypad
 	_IRQ_SETUP();	// Setup IRQ for Keypad & QEI
 	clockSetup();	// Setup RTC
+	GREETING();
 
 	while(1) {
     	if(ALARM_INTERRUPT)
@@ -111,6 +113,41 @@ int main(void) {
 		wait(.3);
     }
     return 0 ;
+}
+
+void GREETING(void){
+	commandLed(1);
+	commandLed(0x86);
+	charWrite('/');
+	charWrite(4);
+	wordWrite("_/");
+	charWrite(4);
+	commandLed(0xC1);
+	wordWrite("/");
+	charWrite(4); // \\  / ");
+	wordWrite("  / ");
+	charWrite(3);
+	charWrite(32);
+	charWrite(3);
+	charWrite(32);
+	charWrite(4);
+	commandLed(0x94);
+	wordWrite("//");
+	charWrite(4);
+	charWrite(4);
+	charWrite(32);
+	charWrite(4);
+	charWrite(5);
+	wordWrite("(*)");
+	charWrite(5);
+	charWrite('/');
+	commandLed(0xD4);
+	wordWrite("`  ");
+	charWrite(4);
+	wordWrite("/   ^ /");
+	commandLed(0xe1);
+	wordWrite("MJ 2020");
+	wait(3);
 }
 
 void setSnooze(void){
@@ -130,14 +167,17 @@ void setSnooze(void){
 		wordWrite("Press * to accept");
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
-
+		commandLed(0xD);
 		commandLed(0b10100);
 		commandLed(0x8D);
 
 		SNOOZE_QEI = true;
+		unsigned int oldDigit = 0;
 		while(snoozeDig1temp < '0' || snoozeDig1temp > '9'){
 			snoozeDig1temp = KEYPUSHED;
-			charWrite((SNOOZE_TIME) + 48);
+			if(oldDigit != SNOOZE_TIME)
+				charWrite((SNOOZE_TIME) + 48);
+			oldDigit = SNOOZE_TIME;
 			commandLed(0x8D);
 			if(snoozeDig1temp == '#')
 				break;
@@ -229,8 +269,10 @@ void changeTime(void){
 			wordWrite("B: Set Alarm");
 			commandLed(0xD4);
 			wordWrite("C: On/Off (");
-			if(ALARM_ON)
-				wordWrite("ON) ");
+			if(ALARM_ON){
+				wordWrite("ON)");
+				charWrite(2);
+			}
 			else
 				wordWrite("OFF)");
 			if(SNOOZE){
@@ -245,7 +287,11 @@ void changeTime(void){
 		else{
 			commandLed(0xC0);
 			wordWrite("D: Set Snooze");
-			commandLed(0x93);
+			if(ALARM_ON){
+				commandLed(0xE2);
+				charWrite(2);
+			}
+			commandLed(0xE7);
 			charWrite(1);
 		}
 	}
