@@ -1,7 +1,7 @@
 /*
 ===============================================================================
  Name        : main.c
- Author      : Matthew Johnson
+ Author      : Matthew Johnson & Talia Nguyen
  Version     :
  Copyright   : $(copyright)
  Description : main definition
@@ -42,7 +42,6 @@ void alarm(void);				// ALARM function
 void setSnooze(void);			// Set Snooze function
 void clockSetup(void);			// RTC Clock Setup function
 void _IRQ_SETUP(void);			// IRQ Setup for 4x4 & QEI
-void GREETING(void);
 
 extern "C" void TIMER0_IRQHandler(void){
 	// Setup timer interrupt every 500 us
@@ -96,7 +95,6 @@ int main(void) {
 	setupKeyPad();	// Setup 4x4 Keypad
 	_IRQ_SETUP();	// Setup IRQ for Keypad & QEI
 	clockSetup();	// Setup RTC
-	GREETING();
 
 	while(1) {
     	if(ALARM_INTERRUPT)
@@ -110,54 +108,9 @@ int main(void) {
     	if(KEYPUSHED == 'D')
     		setSnooze();
     	changeTime();
-		wait(.3);
+    	wait(.3);
     }
     return 0 ;
-}
-
-void GREETING(void){
-	for(int i = 0; i < 3; i++){
-		commandLed(1);
-		commandLed(0x86);
-		charWrite('/');
-		charWrite(4);
-		wordWrite("_/");
-		charWrite(4);
-		commandLed(0xC1);
-		wordWrite("/");
-		charWrite(4); // \\  / ");
-		wordWrite("  / ");
-		if((i%2) == 0)
-			charWrite(3);
-		else
-			charWrite('-');
-		charWrite(32);
-		charWrite(3);
-		charWrite(32);
-		charWrite(4);
-		commandLed(0x94);
-		wordWrite("//");
-		charWrite(4);
-		charWrite(4);
-		charWrite(32);
-		charWrite(4);
-		charWrite(5);
-		wordWrite("(*)");
-		charWrite(5);
-		charWrite('/');
-		commandLed(0xD4);
-		wordWrite("`  ");
-		charWrite(4);
-		wordWrite("/   ^ /");
-		commandLed(0xe1);
-		wordWrite("MJ 2020");
-		if(i == 0)
-			wait(1.25);
-		else if(i == 1)
-			wait(0.5);
-		else
-			wait(3);
-	}
 }
 
 void setSnooze(void){
@@ -178,7 +131,6 @@ void setSnooze(void){
 		commandLed(0xD4);
 		wordWrite("Press # to exit");
 		commandLed(0xD);
-		commandLed(0b10100);
 		commandLed(0x8D);
 
 		SNOOZE_QEI = true;
@@ -307,6 +259,15 @@ void changeTime(void){
 		}
 	}
 	else{
+		unsigned static int counter = 0;
+		unsigned static int stickman = 6;
+		commandLed(0xC0 + counter++);
+		charWrite(stickman++);
+		if(counter == 20)
+			counter = 0;
+		if(stickman == 8)
+			stickman = 6;
+
 		commandLed(0x94);
 		wordWrite("Press D for OFF");
 		commandLed(0xD4);
