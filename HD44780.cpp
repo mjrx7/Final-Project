@@ -120,15 +120,6 @@ void setupHD44780(void){
 	charWrite(0b00100);
 	charWrite(0b00111);
 	charWrite(0b11001);
-	// Stick man 1 (8)
-	/*charWrite(0b01110);
-	charWrite(0b01010);
-	charWrite(0b01110);
-	charWrite(0b00100);
-	charWrite(0b11111);
-	charWrite(0b00101);
-	charWrite(0b01110);
-	charWrite(0b10001);*/
 
 	commandLed(0);
 	// Save custom character

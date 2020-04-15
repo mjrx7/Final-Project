@@ -32,7 +32,7 @@ volatile bool PAGE1 = true;			// Set if PAGE1 display
 volatile int QEICOUNT = 0;			// Index for QEI
 char KEYPUSHED = 0;				// Returns 4x4 keypushed
 volatile bool SNOOZE_QEI = false;
-void changeTime(void);			// Change time on display
+void MAIN_MENU(void);			// Change time on display
 void printTime(unsigned int);	// Print sub-routine
 void setTime(void);				// Set time routine
 void setAlarm(void);			// Set alarm routine
@@ -107,7 +107,7 @@ int main(void) {
     		toggleAlarm();
     	if(KEYPUSHED == 'D')
     		setSnooze();
-    	changeTime();
+    	MAIN_MENU();
     	wait(.3);
     }
     return 0 ;
@@ -206,7 +206,7 @@ void toggleAlarm(void){
 	GPREG0 = (AMR << 11) | (ALHOUR << 6) | ALMIN;
 }
 
-void changeTime(void){
+void MAIN_MENU(void){
 	unsigned int time = CTIME0;
 	#define timeInSeconds ((time) & 0x3F)
 	#define timeInMinutes ((time >> 8) & 0x3F)
@@ -222,36 +222,39 @@ void changeTime(void){
 	unsigned int digit = (1 << 20) | (PM << 19) | (timeInHours/10 << 18) | (timeInHours%10 << 14) | (timeInMinutes/10 << 11) | (timeInMinutes%10 << 7) | (timeInSeconds/10 << 4) | (timeInSeconds%10);
 
 	commandLed(1);
-	commandLed(0x84);
-	printTime(digit);
 	if(!ALARM_ACTIVE){
 		if(PAGE1){
-			commandLed(0xC0);
-			wordWrite("A: Set Time");
-			commandLed(0x94);
-			wordWrite("B: Set Alarm");
-			commandLed(0xD4);
-			wordWrite("C: On/Off (");
+			commandLed(0xC4);
+			printTime(digit);
+			if(SNOOZE){
+				commandLed(0xE3);
+				wordWrite("Zzz");
+			}
 			if(ALARM_ON){
-				wordWrite("ON)");
+				commandLed(0xE6);
 				charWrite(2);
 			}
-			else
-				wordWrite("OFF)");
-			if(SNOOZE){
-				wordWrite("Zzz ");
-				charWrite(0);
-			}
-			else{
-				wordWrite("    ");
-				charWrite(0);
-			}
+			commandLed(0xE7);
+			charWrite(0);
 		}
 		else{
+			wordWrite("A: Set Time");
 			commandLed(0xC0);
+			wordWrite("B: Set Alarm");
+			commandLed(0x94);
+			wordWrite("C: On/Off (");
+			if(ALARM_ON)
+				wordWrite("ON)");
+			else
+				wordWrite("OFF)");
+			commandLed(0xD4);
 			wordWrite("D: Set Snooze");
+			if(SNOOZE){
+				commandLed(0xE3);
+				wordWrite("Zzz");
+			}
 			if(ALARM_ON){
-				commandLed(0xE2);
+				commandLed(0xE6);
 				charWrite(2);
 			}
 			commandLed(0xE7);
@@ -259,9 +262,11 @@ void changeTime(void){
 		}
 	}
 	else{
+		commandLed(0xC4);
+		printTime(digit);
 		unsigned static int counter = 0;
 		unsigned static int stickman = 6;
-		commandLed(0xC0 + counter++);
+		commandLed(0x80 + counter++);
 		charWrite(stickman++);
 		if(counter == 20)
 			counter = 0;
@@ -288,11 +293,12 @@ void alarm(void){
 		wait(0.2);
 		if((off = KEYPUSHED) != 0)
 			break;
-		changeTime();
+		MAIN_MENU();
 		_alarm.setFrequency(770);
 		wait(0.2);
 		off = KEYPUSHED;
 	}
+	_alarm = 0;
 
 	if(off != 'D'){
 		if(!SNOOZE_ALREADY){
@@ -316,9 +322,10 @@ void alarm(void){
 		SNOOZE_ALREADY = false;
 		ALMIN = OLD_ALARM & 0x3f;
 		ALHOUR = (OLD_ALARM >> 6);
+		toggleAlarm();
 	}
 	while(off == KEYPUSHED){}
-	_alarm = 0;
+
 	ILR |= (1 << 1);	// Clear Alarm
 	ALARM_ACTIVE = false;
 }
@@ -484,8 +491,13 @@ void setAlarm(void){
 		}
 		if(AMorPM == '#')
 			break;
-		if(AMorPM == '2')
-			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
+		if(AMorPM == '2'){
+			if(((hrDig10temp - 48) == 1) && ((hrDig1temp-48) == 2))
+				ALHOUR = 12;
+			else
+				ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48) + 12;
+
+		}
 		else{
 			ALHOUR = (hrDig10temp - 48)*10 + (hrDig1temp-48);
 			if(ALHOUR == 12)
@@ -496,6 +508,8 @@ void setAlarm(void){
 		unsigned int amrtemp = AMR;
 		amrtemp &= 0x7;
 		GPREG0 = (AMR << 11) | (ALHOUR << 6) | ALMIN;
+		if(!ALARM_ON)
+			toggleAlarm();
 	}
 	commandLed(0x0c);
 }
