@@ -8,8 +8,6 @@
 #ifndef HD44780_H_
 #define HD44780_H_
 
-//#include "TimerLPC.h"
-
 void BusoutWrite(unsigned int);//uint8_t);
 void commandLed(unsigned int);//uint8_t);
 void charWrite(unsigned int);//uint8_t);
