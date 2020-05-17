@@ -1,6 +1,6 @@
 # Final-Project
 
-Final project for Digital Design Lab of last semester at University of Oklahoma.
+Final project for Digital Design Lab, University of Oklahoma.
 
 Hardware: NXP LPC1769
 
