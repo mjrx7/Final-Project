@@ -7,3 +7,5 @@ Hardware: NXP LPC1769
 Project: Alarm clock utilizing battery backup.
 
 Main project file: clock.cpp
+
+Demo: https://youtu.be/lFlnLrqMCCE
